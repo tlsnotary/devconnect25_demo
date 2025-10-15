@@ -128,6 +128,10 @@ var options = {
           to: path.join(__dirname, 'build'),
           force: true,
         },
+        {
+          from: 'favicon.ico',
+          to: path.join(__dirname, 'build'),
+        },
       ],
     }),
     new CopyWebpackPlugin({
