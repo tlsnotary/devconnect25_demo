@@ -28,7 +28,7 @@ impl Default for Config {
                 .parse::<Uri>()
                 .unwrap(),
             wstcp_proxy_port: 55688,
-            session_timeout_secs: 60,
+            session_timeout_secs: 120,
         }
     }
 }
