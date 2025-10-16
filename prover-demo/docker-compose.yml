@@ -15,7 +15,7 @@ services:
     build:
       context: ./webapp
       args:
-        PROVER_PROXY_URL: wss://test.tlsnotary.org/prove
+        PROVER_PROXY_URL: wss://devconnect.tlsnotary.org/prove
         # PROVER_PROXY_URL: wss://localhost:8443/prove
     restart: unless-stopped
     ports:
