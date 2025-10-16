@@ -20,17 +20,14 @@ ENV PROVER_PROXY_URL=${PROVER_PROXY_URL}
 # Build the application
 RUN npx webpack --config webpack.js --mode production
 
-# Production stage - simple nginx to serve static files
-FROM nginx:alpine
+# Production stage - Caddy to serve static files
+FROM caddy:alpine
 
-# Copy custom nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy Caddy configuration
+COPY Caddyfile /etc/caddy/Caddyfile
 
-# Copy built files to nginx
-COPY --from=builder /app/build /usr/share/nginx/html
+# Copy built files to Caddy
+COPY --from=builder /app/build /usr/share/caddy
 
 # Expose port 80
 EXPOSE 80
-
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]

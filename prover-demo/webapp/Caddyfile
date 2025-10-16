@@ -1,0 +1,11 @@
+:80 {
+    root * /usr/share/caddy
+    file_server
+    
+    # SPA routing - try files, fallback to index.html
+    try_files {path} {path}/ /index.html
+    
+    # Cache static assets
+    @static path *.js *.css *.png *.jpg *.jpeg *.gif *.ico *.svg *.wasm
+    header @static Cache-Control "public, max-age=3600"
+}

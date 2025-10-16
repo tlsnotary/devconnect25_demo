@@ -3,7 +3,7 @@ services:
   prover-server:
     build: ./server
     ports:
-      - "9816:9816" # WebSocket server port (HTTP)
+      - "9816" # WebSocket server port (HTTP)
       # - "55688:55688" # no required for demo
     restart: unless-stopped
     container_name: prover-server
@@ -15,26 +15,27 @@ services:
     build:
       context: ./webapp
       args:
-        PROVER_PROXY_URL: wss://test.tlsnotary.org:8443/prove
+        PROVER_PROXY_URL: wss://test.tlsnotary.org/prove
+        # PROVER_PROXY_URL: wss://localhost:8443/prove
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "80"
     container_name: verifier-webapp
     depends_on:
       - prover-server
     environment:
       - RUST_LOG=info
 
-  # Nginx proxy for local testing (HTTPS + WebSocket proxy)
-  nginx:
-    image: nginx:alpine
+  # Caddy proxy for HTTPS + WebSocket proxy
+  caddy:
+    image: caddy:alpine
     ports:
-      - "8443:443"
+      - "443:443"
     volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ../devops/certs:/etc/nginx/ssl:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../devops/certs:/certs:ro
     depends_on:
       - verifier-webapp
       - prover-server
     restart: unless-stopped
-    container_name: prover-nginx
+    container_name: prover-caddy
