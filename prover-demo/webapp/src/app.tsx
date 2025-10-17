@@ -2,6 +2,7 @@ import React, { ReactElement, useCallback, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as Comlink from 'comlink';
 import { Verifier as TVerifier } from 'tlsn-wasm';
+import ConfettiExplosion from 'react-confetti-explosion';
 import './app.scss';
 import OverviewDiagram from './overview_prover_verifier.svg';
 
@@ -26,6 +27,7 @@ function App(): ReactElement {
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [consoleMessages, setConsoleMessages] = useState<string[]>([]);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   // Simple console capture
   React.useEffect(() => {
@@ -121,10 +123,21 @@ function App(): ReactElement {
     );
 
     setProcessing(false);
+    setShowConfetti(true);
   }, [setResult, setProcessing]);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-100">
+      {showConfetti && (
+        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
+          <ConfettiExplosion
+            force={0.6}
+            duration={4000}
+            particleCount={150}
+            width={1600}
+          />
+        </div>
+      )}
       <div className="w-full p-4 bg-slate-800 text-white flex-shrink-0 shadow-md">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold">TLSNotary Devconnect Demo</h1>
@@ -150,7 +163,25 @@ function App(): ReactElement {
 
       <div className="grid grid-cols-1 gap-4 p-4 flex-grow">
         <div className="flex flex-col bg-white rounded-lg shadow-md border border-gray-200 p-4">
-          <p>TODO introduction Soon :tm</p>
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">
+              Verify the Ethereum Foundation's bank balance
+            </h2>
+            <p className="text-lg text-gray-600 mb-4">
+              With TLSNotary, you can verify the EF's bank balance without having access yourself.
+            </p>
+            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 text-left rounded">
+              <p className="text-gray-700 mb-2">
+                <strong className="text-gray-800">How it works:</strong>
+              </p>
+              <p className="text-gray-700 mb-2">
+                Your browser connects to our prover who proves the bank balance via TLSNotary's <strong>MPC-TLS protocol</strong>, giving you cryptographic guarantees of authenticity.
+              </p>
+              <p className="text-gray-700">
+                You get a proof that the EF's Swiss Bank balance is genuine. The prover only reveals what it wants to reveal through <strong>selective disclosure</strong>.
+              </p>
+            </div>
+          </div>
 
           <div className="text-center text-gray-700 mb-6">
             {/* Architecture Overview Diagram */}
@@ -162,33 +193,32 @@ function App(): ReactElement {
             </div>
           </div>
 
-          <div className="text-center">
-            <button
-              onClick={!processing && ready ? onClick : undefined}
-              disabled={processing || !ready}
-              className={`
-                inline-block px-6 py-3 rounded-xl font-semibold text-white mb-6 text-lg
-                transition-all duration-200 ease-in-out transform
-                shadow-lg hover:shadow-xl
-                ${processing || !ready
-                  ? 'bg-gray-400 cursor-not-allowed opacity-70'
-                  : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 hover:scale-105 active:scale-95 hover:-translate-y-0.5'
-                }
-                focus:outline-none focus:ring-4 focus:ring-blue-300 focus:ring-opacity-50
-                border-0 relative overflow-hidden
-              `}
-            >
-              <span className="relative z-10 flex items-center justify-center space-x-2">
-                {processing && (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          {!processing && (
+            <div className="text-center">
+              <button
+                onClick={ready ? onClick : undefined}
+                disabled={!ready}
+                className={`
+                  inline-block px-6 py-3 rounded-xl font-semibold text-white mb-6 text-lg
+                  transition-all duration-200 ease-in-out transform
+                  shadow-lg hover:shadow-xl
+                  ${!ready
+                    ? 'bg-gray-400 cursor-not-allowed opacity-70'
+                    : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 hover:scale-105 active:scale-95 hover:-translate-y-0.5'
+                  }
+                  focus:outline-none focus:ring-4 focus:ring-blue-300 focus:ring-opacity-50
+                  border-0 relative overflow-hidden
+                `}
+              >
+                <span className="relative z-10 flex items-center justify-center space-x-2">
+                  <span>{ready ? 'Verify Prover Server' : 'Initializing...'}</span>
+                </span>
+                {ready && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-blue-500 opacity-0 hover:opacity-20 transition-opacity duration-200"></div>
                 )}
-                <span>{ready ? 'Verify Prover Server' : 'Initializing...'}</span>
-              </span>
-              {!processing && ready && (
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-blue-500 opacity-0 hover:opacity-20 transition-opacity duration-200"></div>
-              )}
-            </button>
-          </div>
+              </button>
+            </div>
+          )}
 
           {/* Console Log View */}
           <div className="mb-4">
@@ -207,20 +237,23 @@ function App(): ReactElement {
           </div>
 
           <div className="mt-6 mb-4">
-            {result && (
+            {(processing || result) && (
               <>
                 <h3 className="text-md font-semibold text-gray-800 mb-2">Verified data:</h3>
-                <>
-                  <div className="bg-gray-100 border border-gray-300 p-4 rounded-lg mt-4">
+                <div className="bg-gray-100 border border-gray-300 p-4 rounded-lg mt-4">
+                  {processing ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                      <span className="ml-3 text-gray-600">Verifying...</span>
+                    </div>
+                  ) : (
                     <pre data-testid="proof-data" className="text-left text-sm text-gray-800 whitespace-pre-wrap overflow-auto">
                       {result}
                     </pre>
-                  </div>
-                </>
-
+                  )}
+                </div>
               </>
             )}
-
           </div>
 
           {/* POAP Link Section - Only shown when verification is successful */}
