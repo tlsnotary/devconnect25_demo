@@ -30,6 +30,7 @@ use tracing::info;
 pub const DEFAULT_FIXTURE_PORT: u16 = 3000;
 const AUTH_TOKEN: &str = "random_auth_token";
 const DASHBOARD_CSS: &str = include_str!("dashboard.css");
+const HTMX_JS: &str = include_str!("htmx.min.js");
 
 fn get_local_ip() -> String {
     if let Ok(ip) = local_ip_address::local_ip() {
@@ -323,7 +324,7 @@ pub fn App(props: AppProps) -> Element {
             meta { charset: "utf-8" }
             meta { name: "viewport", content: "width=device-width, initial-scale=1" }
             title { "Swiss Bank Demo" }
-            script { src: "https://unpkg.com/htmx.org@1.9.10" }
+            script { dangerous_inner_html: HTMX_JS }
             style { dangerous_inner_html: DASHBOARD_CSS }
         }
         body {
