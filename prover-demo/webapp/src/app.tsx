@@ -146,7 +146,7 @@ function App(): ReactElement {
 
       <div className="grid grid-cols-1 gap-4 p-4 flex-grow">
         <div className="flex flex-col bg-white rounded-lg shadow-md border border-gray-200 p-4">
-          <p>TODO introduction</p>
+          <p>TODO introduction Soon :tm</p>
 
           <div className="text-center text-gray-700 mb-6">
             {/* Architecture Overview Diagram */}
