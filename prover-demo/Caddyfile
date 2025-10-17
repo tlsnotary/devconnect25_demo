@@ -1,4 +1,4 @@
-devconnect.tlsnotary.org, localhost:8443 {
+devconnect-local.tlsnotary.org, localhost:8443 {
     tls /certs/fullchain.pem /certs/privkey.pem 
     # tls internal
 

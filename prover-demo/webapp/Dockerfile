@@ -14,7 +14,7 @@ RUN npm ci
 COPY . .
 
 # Set production WebSocket URL
-ARG PROVER_PROXY_URL=wss://devconnect.tlsnotary.org/prove
+ARG PROVER_PROXY_URL=wss://devconnect-local.tlsnotary.org/prove
 ENV PROVER_PROXY_URL=${PROVER_PROXY_URL}
 
 # Build the application

@@ -1,5 +1,5 @@
 # Use the official Rust image to build the app
-FROM rust:1.90 as builder
+FROM rust:1.90 AS builder
 
 WORKDIR /workspace
 

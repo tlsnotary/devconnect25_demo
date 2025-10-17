@@ -39,7 +39,8 @@
 
     <div class="qr-section">
         <h2>Step 2: Open the Verifier Demo</h2>
-        <p>Scan or go to: <br><a href="http://prover-demo.tlsnotary.org">http://prover-demo.tlsnotary.org</a></p>
+        <p>Scan or go to: <br><a
+                href="https://devconnect-local.tlsnotary.org">https://devconnect-local.tlsnotary.org</a></p>
         <div id="verifier-qr" class="qr"></div>
     </div>
 
@@ -63,7 +64,7 @@
     <script>
         // QR code payloads
         const wifiPayload = "WIFI:T:WPA;S:TLSNotary;P:tlsnotary;;";
-        const verifierURL = "http://192.168.8.129";
+        const verifierURL = "https://devconnect-local.tlsnotary.org";
 
         new QRCode(document.getElementById("wifi-qr"), {
             text: wifiPayload,
