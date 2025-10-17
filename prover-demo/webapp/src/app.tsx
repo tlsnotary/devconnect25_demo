@@ -1,15 +1,14 @@
 import React, { ReactElement, useCallback, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as Comlink from 'comlink';
-import { Watch } from 'react-loader-spinner';
 import { Verifier as TVerifier } from 'tlsn-wasm';
 import './app.scss';
-import { HTTPParser } from 'http-parser-js';
 import OverviewDiagram from './overview_prover_verifier.svg';
 
-const { init, Verifier }: any = Comlink.wrap(
+const worker = Comlink.wrap(
   new Worker(new URL('./worker.ts', import.meta.url)),
 );
+const { init, Verifier, getBufferedLogs }: any = worker;
 
 const container = document.getElementById('root');
 const root = createRoot(container!);
@@ -19,9 +18,6 @@ root.render(<App />);
 // Simple console capture
 let capturedLogs: string[] = [];
 const originalLog = console.log;
-
-// const serverUrl = 'https://swissbank.tlsnotary.org/balances';
-const serverUrl = "https://raw.githubusercontent.com/tlsnotary/devconnect25_demo/refs/heads/dev/swissbank/src/data/swissbankdata.json"
 
 const proverProxyUrl = process.env.PROVER_PROXY_URL || 'ws://localhost:9816/prove';
 
@@ -33,24 +29,34 @@ function App(): ReactElement {
 
   // Simple console capture
   React.useEffect(() => {
-    console.log = (...args) => {
+    const addLogMessage = (message: string) => {
       const timestamp = new Date().toLocaleTimeString();
-      const message = `[${timestamp}] ${args.join(' ')}`;
-      capturedLogs.push(message);
+      const timestampedMessage = `[${timestamp}] ${message}`;
+      capturedLogs.push(timestampedMessage);
       setConsoleMessages([...capturedLogs]);
+    };
+
+    console.log = (...args) => {
+      addLogMessage(args.join(' '));
       originalLog.apply(console, args);
     };
 
+    // Poll worker logs periodically
+    const pollInterval = setInterval(async () => {
+      const workerLogs = await getBufferedLogs();
+      workerLogs.forEach((log: string) => addLogMessage(log));
+    }, 50); // Poll every 50ms for faster log capture
+
     return () => {
       console.log = originalLog;
+      clearInterval(pollInterval);
     };
   }, []);
 
   // Initialize TLSNotary
   React.useEffect(() => {
     (async () => {
-      // Calculate optimal concurrency: min(3, available cores - 1) to avoid hitting browser limits
-      const maxConcurrency = Math.min(3, Math.max(1, (navigator.hardwareConcurrency || 4) - 1));
+      const maxConcurrency = navigator.hardwareConcurrency;
 
       await init({
         loggingLevel: 'Debug',
@@ -63,8 +69,6 @@ function App(): ReactElement {
 
   const onClick = useCallback(async () => {
     setProcessing(true);
-    capturedLogs = [];
-    setConsoleMessages([]);
     console.log('Starting verifier demo...');
 
     let verifier: TVerifier;
@@ -250,38 +254,6 @@ function App(): ReactElement {
       </div>
     </div>
   );
-}
-
-function parseHttpMessage(buffer: Buffer, type: 'request' | 'response') {
-  const parser = new HTTPParser(
-    type === 'request' ? HTTPParser.REQUEST : HTTPParser.RESPONSE,
-  );
-  const body: Buffer[] = [];
-  let complete = false;
-  let headers: string[] = [];
-
-  parser.onBody = (t) => {
-    body.push(t);
-  };
-
-  parser.onHeadersComplete = (res) => {
-    headers = res.headers;
-  };
-
-  parser.onMessageComplete = () => {
-    complete = true;
-  };
-
-  parser.execute(buffer);
-  parser.finish();
-
-  if (!complete) throw new Error(`Could not parse ${type.toUpperCase()}`);
-
-  return {
-    info: buffer.toString('utf-8').split('\r\n')[0] + '\r\n',
-    headers,
-    body,
-  };
 }
 
 function bytesToUtf8(array: number[]): string {
