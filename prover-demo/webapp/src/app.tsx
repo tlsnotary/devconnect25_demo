@@ -1,7 +1,7 @@
 import React, { ReactElement, useCallback, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as Comlink from 'comlink';
-import { Verifier as TVerifier } from 'tlsn-wasm';
+import { Verifier as TVerifier, CrateLogFilter } from 'tlsn-wasm';
 import ConfettiExplosion from 'react-confetti-explosion';
 import './app.scss';
 import OverviewDiagram from './overview_prover_verifier.svg';
@@ -60,9 +60,16 @@ function App(): ReactElement {
     (async () => {
       const maxConcurrency = navigator.hardwareConcurrency;
 
+      // Configure crate-specific log levels to reduce noise
+      const crateFilters: CrateLogFilter[] = [
+        { name: 'yamux', level: 'Info' },
+        { name: 'uid_mux', level: 'Info' },
+      ];
+
       await init({
         loggingLevel: 'Debug',
-        hardwareConcurrency: maxConcurrency
+        hardwareConcurrency: maxConcurrency,
+        crateFilters: crateFilters,
       });
       setReady(true);
       console.log(`🔧 TLSNotary initialized with ${maxConcurrency} threads`);

@@ -1,5 +1,5 @@
 import * as Comlink from 'comlink';
-import initWasm, { LoggingLevel, initialize, Verifier } from 'tlsn-wasm';
+import initWasm, { LoggingLevel, initialize, Verifier, CrateLogFilter } from 'tlsn-wasm';
 
 // Capture console logs from the worker - use a simple buffer that main thread polls
 const logBuffer: string[] = [];
@@ -60,14 +60,16 @@ Comlink.expose({
 export default async function init(config?: {
   loggingLevel?: LoggingLevel;
   hardwareConcurrency?: number;
+  crateFilters?: CrateLogFilter[];
 }) {
   const {
     loggingLevel = 'Info',
     hardwareConcurrency = navigator.hardwareConcurrency,
+    crateFilters,
   } = config || {};
 
   console.log('[worker.ts] init() called, about to initialize WASM');
-  console.debug('[worker.ts] This is a debug message from worker init');
+  // console.debug('[worker.ts] This is a debug message from worker init');
 
   const res = await initWasm();
 
@@ -76,7 +78,7 @@ export default async function init(config?: {
   await initialize(
     {
       level: loggingLevel,
-      crate_filters: undefined,
+      crate_filters: crateFilters,
       span_events: undefined,
     },
     hardwareConcurrency,
