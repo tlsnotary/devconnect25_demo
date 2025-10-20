@@ -119,3 +119,5 @@ jobs:
                   push: true
                   tags: ${{ steps.meta-verifier-webapp.outputs.tags }}
                   labels: ${{ steps.meta-verifier-webapp.outputs.labels }}
+                  build-args: |
+                      PROVER_PROXY_URL=wss://devconnect.tlsnotary.org/prove
