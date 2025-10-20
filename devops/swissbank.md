@@ -13,6 +13,8 @@ sudo netstat -tlnp | grep :443
 sudo ss -tlnp | grep :443
 
 
+https://www.raspberrypi.com/tutorials/how-to-use-a-raspberry-pi-in-kiosk-mode/
+
 
 
 .config/autostart/chromium.desktop:
