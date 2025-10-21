@@ -22,21 +22,6 @@ RUN cargo build --release
 # Runtime stage
 FROM debian:bookworm-slim
 
-# Install required system dependencies including OpenSSL
-RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    openssl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create certificate directory
-RUN mkdir -p /app/certs
-
-# Generate self-signed certificate for HTTPS WebSocket
-RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout /app/certs/server.key \
-    -out /app/certs/server.crt \
-    -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost"
-
 # Create a non-root user
 RUN useradd -r -s /bin/false appuser
 
@@ -48,9 +33,6 @@ COPY --from=builder /app/target/release/server /app/server
 
 # Change ownership to appuser (but keep certs readable)
 RUN chown -R appuser:appuser /app
-RUN chmod 644 /app/certs/server.crt
-RUN chmod 600 /app/certs/server.key
-RUN chown appuser:appuser /app/certs/server.key /app/certs/server.crt
 
 # Switch to non-root user
 USER appuser
