@@ -1,9 +1,4 @@
 :80 {
-	# WebSocket proxy to prover backend
-	handle /prove {
-		reverse_proxy {$PROVER_SERVER:prover-server:9816}
-	}
-
 	root * /usr/share/caddy
 	file_server
 
