@@ -78,6 +78,7 @@ pub async fn run_ws_server(config: &config::Config) -> Result<(), eyre::ErrRepor
             }
         };
         debug!("Received TCP connection");
+        stream.set_nodelay(true).unwrap();
 
         let tower_service = router.clone();
         let protocol = protocol.clone();
@@ -86,6 +87,7 @@ pub async fn run_ws_server(config: &config::Config) -> Result<(), eyre::ErrRepor
             info!("Accepted TCP connection");
             // Reference: https://github.com/tokio-rs/axum/blob/5201798d4e4d4759c208ef83e30ce85820c07baa/examples/low-level-rustls/src/main.rs#L67-L80
             let io = TokioIo::new(stream);
+
             let hyper_service = hyper::service::service_fn(move |request: Request<Incoming>| {
                 tower_service.clone().call(request)
             });
