@@ -68,12 +68,12 @@ export default async function init(config?: {
     crateFilters,
   } = config || {};
 
-  console.log('[worker.ts] init() called, about to initialize WASM');
+  // console.log('[worker.ts] init() called, about to initialize WASM');
   // console.debug('[worker.ts] This is a debug message from worker init');
 
   const res = await initWasm();
 
-  console.log('[worker.ts] initWasm() completed');
+  // console.log('[worker.ts] initWasm() completed');
 
   await initialize(
     {
@@ -84,5 +84,5 @@ export default async function init(config?: {
     hardwareConcurrency,
   );
 
-  console.log('[worker.ts] initialize() completed');
+  // console.log('[worker.ts] initialize() completed');
 }

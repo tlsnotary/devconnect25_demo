@@ -67,6 +67,8 @@ function App(): ReactElement {
         { name: 'uid_mux', level: 'Info' },
       ];
 
+      console.log('🔧 start TLSNotary WASM initialization');
+
       await init({
         loggingLevel: 'Debug',
         hardwareConcurrency: maxConcurrency,
@@ -79,49 +81,46 @@ function App(): ReactElement {
 
   const onClick = useCallback(async () => {
     setProcessing(true);
-    console.log('Starting verifier demo...');
+    console.log('🎬 Starting verification demo...');
 
     let verifier: TVerifier;
     try {
-      console.log('Setting up Verifier');
+      console.log('🔧 Setting up Verifier');
       verifier = await new Verifier({
         max_sent_data: 2048,
         max_recv_data: 4096
       });
-      console.log('Verifier class instantiated');
+      console.log('🔧 Verifier class instantiated');
       await verifier.connect(proverProxyUrl);
-      console.log('Connecting verifier to p2p proxy: done');
     } catch (e: any) {
       console.error('Error setting up verifier: ' + e.message);
-      console.error('Error connecting verifier to p2p proxy: ' + e.message);
+      console.error('Error connecting verifier to prover server: ' + e.message);
       setProcessing(false);
       return;
     }
 
     await new Promise((r) => setTimeout(r, 2000));
 
-    console.log('Start verifier');
-    // This needs to be called before we send the request
-    // This starts the verifier and makes it wait for the prover to send the request
+    console.log('🔐 Start verification');
     const verified = verifier.verify();
     const result = await verified;
-    console.log('Verification completed');
+    console.log('🔐 Verification completed');
 
     const sent_b = result.transcript?.sent || [];
     const recv_b = result.transcript?.recv || [];
 
     const server_name = result.server_name
 
-    console.log(`Verified server name: ${server_name}`);
+    console.log(`🔑 Verified server name: ${server_name}`);
 
     let recv = bytesToUtf8(recv_b);
     let sent = bytesToUtf8(sent_b);
 
-    console.log('Verified data received');
-    console.log(`Transcript sent: ${sent.substring(0, 100)}${sent.length > 100 ? '...' : ''}`);
-    console.log(`Transcript received: ${recv.substring(0, 100)}${recv.length > 100 ? '...' : ''}`);
+    // console.log('✅ Verified data received');
+    // console.log(`📋 Transcript sent: ${sent.substring(0, 100)}${sent.length > 100 ? '...' : ''}`);
+    // console.log(`📋 Transcript received: ${recv.substring(0, 100)}${recv.length > 100 ? '...' : ''}`);
 
-    console.log('Ready - verification completed successfully');
+    console.log('✅ Ready - verification completed successfully');
 
     setResult(`Sent to ${server_name}:\n` +
       sent +
@@ -183,7 +182,7 @@ function App(): ReactElement {
                 <strong className="text-gray-800">How it works:</strong>
               </p>
               <p className="text-gray-700 mb-2">
-                Your browser connects to our prover who proves the bank balance via TLSNotary's <strong>MPC-TLS protocol</strong>, giving you cryptographic guarantees of authenticity.
+                Your browser connects to our prover who proves <a href="https://swissbank.tlsnotary.org/balances">the bank balance</a> via TLSNotary's <strong>MPC-TLS protocol</strong>, giving you cryptographic guarantees of authenticity.
               </p>
               <p className="text-gray-700">
                 You get a proof that the EF's Swiss Bank balance is genuine. The prover only reveals what it wants to reveal through <strong>selective disclosure</strong>.
