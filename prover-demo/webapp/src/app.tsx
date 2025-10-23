@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import * as Comlink from 'comlink';
 import { Verifier as TVerifier, CrateLogFilter } from 'tlsn-wasm';
 import ConfettiExplosion from 'react-confetti-explosion';
+import ScrollToBottom from 'react-scroll-to-bottom';
 import './app.scss';
 import OverviewDiagram from './overview_prover_verifier.svg';
 
@@ -230,17 +231,17 @@ function App(): ReactElement {
           {/* Console Log View */}
           <div className="mb-4">
             <h3 className="text-md font-semibold text-gray-800 mb-2">Console Log</h3>
-            <div className="flex flex-col text-sm bg-slate-50 border border-slate-200 w-full h-48 py-2 overflow-y-auto rounded">
+            <ScrollToBottom className="flex flex-col text-sm bg-slate-50 border border-slate-200 w-full h-48 py-2 overflow-y-auto rounded">
               {consoleMessages.map((m, index) => (
-                <span
+                <div
                   key={index}
                   data-testid="console-log"
-                  className="px-3 py-1 text-slate-600 break-all"
+                  className="px-3 py-1 text-slate-600 break-all whitespace-pre-wrap"
                 >
                   {m}
-                </span>
+                </div>
               ))}
-            </div>
+            </ScrollToBottom>
           </div>
 
           <div className="mt-6 mb-4">
@@ -254,7 +255,7 @@ function App(): ReactElement {
                       <span className="ml-3 text-gray-600">Verifying...</span>
                     </div>
                   ) : (
-                    <pre data-testid="proof-data" className="text-left text-sm text-gray-800 whitespace-pre-wrap overflow-auto">
+                    <pre data-testid="proof-data" className="text-left text-sm text-gray-800 whitespace-pre-wrap break-all overflow-auto">
                       {result}
                     </pre>
                   )}
@@ -297,5 +298,5 @@ function App(): ReactElement {
 }
 
 function bytesToUtf8(array: number[]): string {
-  return Buffer.from(array).toString("utf8").replaceAll('\u0000', '🙈');
+  return Buffer.from(array).toString("utf8").replaceAll('\u0000', '█');
 }
