@@ -150,6 +150,7 @@ var options = {
     }),
     new webpack.DefinePlugin({
       'process.env.PROVER_PROXY_URL': JSON.stringify(process.env.PROVER_PROXY_URL || 'ws://localhost:9816/prove'),
+      'process.env.POAP_LINK': JSON.stringify(process.env.POAP_LINK || ''),
     }),
   ].filter(Boolean),
   // Required by wasm-bindgen-rayon, in order to use SharedArrayBuffer on the Web

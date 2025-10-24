@@ -17,6 +17,10 @@ COPY . .
 ARG PROVER_PROXY_URL=wss://devconnect-local.tlsnotary.org/prove
 ENV PROVER_PROXY_URL=${PROVER_PROXY_URL}
 
+# Optional POAP link (leave empty to hide the POAP section)
+ARG POAP_LINK=""
+ENV POAP_LINK=${POAP_LINK}
+
 # Build the application
 RUN npx webpack --config webpack.js --mode production
 

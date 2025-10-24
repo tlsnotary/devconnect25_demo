@@ -23,6 +23,7 @@ let capturedLogs: string[] = [];
 const originalLog = console.log;
 
 const proverProxyUrl = process.env.PROVER_PROXY_URL || 'ws://localhost:9816/prove';
+const poapLink = process.env.POAP_LINK || '';
 
 function App(): ReactElement {
   const [ready, setReady] = useState(false);
@@ -275,30 +276,32 @@ function App(): ReactElement {
             )}
           </div>
 
-          {/* POAP Link Section - Only shown when verification is successful */}
+          {/* POAP Link Section - Only shown when verification is successful and POAP link is configured */}
           {result && (
             <div className="mt-6 mb-4">
               <h3 className="text-md font-semibold text-gray-800 mb-2">🎉 Verification Successful!</h3>
-              <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-green-800 font-medium mb-1">Claim your POAP!</p>
-                    <p className="text-green-700 text-sm">
-                      You've successfully verified data using TLSNotary.
-                    </p>
+              {poapLink && (
+                <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-green-800 font-medium mb-1">Claim your POAP!</p>
+                      <p className="text-green-700 text-sm">
+                        You've successfully verified data using TLSNotary.
+                      </p>
+                    </div>
+                    <a
+                      href={poapLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors duration-200 flex items-center space-x-2"
+                      onClick={() => trackEvent('devconnect', 'Click POAP')}
+                    >
+                      <span>🏆</span>
+                      <span>Claim POAP</span>
+                    </a>
                   </div>
-                  <a
-                    href="https://poap.gallery/event/your-event-id"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="ml-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors duration-200 flex items-center space-x-2"
-                    onClick={() => trackEvent('devconnect', 'Click POAP')}
-                  >
-                    <span>🏆</span>
-                    <span>Claim POAP</span>
-                  </a>
                 </div>
-              </div>
+              )}
             </div>
           )}
 

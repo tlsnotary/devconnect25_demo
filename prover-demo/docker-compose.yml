@@ -17,6 +17,7 @@ services:
       args:
         PROVER_PROXY_URL: wss://devconnect-local.tlsnotary.org/prove
         # PROVER_PROXY_URL: wss://localhost:8443/prove
+        POAP_LINK: "https://poap.gallery/event/your-event-id"  # Set to empty string to hide POAP section
     restart: unless-stopped
     ports:
       - "80"
