@@ -6,6 +6,7 @@ import ConfettiExplosion from 'react-confetti-explosion';
 import ScrollToBottom from 'react-scroll-to-bottom';
 import './app.scss';
 import OverviewDiagram from './overview_prover_verifier.svg';
+import { trackEvent } from './matomo';
 
 const worker = Comlink.wrap(
   new Worker(new URL('./worker.ts', import.meta.url)),
@@ -76,12 +77,17 @@ function App(): ReactElement {
       });
       setReady(true);
       console.log(`🔧 TLSNotary initialized with ${maxConcurrency} threads`);
+
+      trackEvent('devconnect', 'Initialized', `threads`, maxConcurrency);
     })();
   }, []);
 
   const onClick = useCallback(async () => {
     setProcessing(true);
     console.log('🎬 Starting verification demo...');
+
+    trackEvent('devconnect', 'Start Verification', `started`);
+
 
     let verifier: TVerifier;
     try {
@@ -95,6 +101,9 @@ function App(): ReactElement {
     } catch (e: any) {
       console.error('Error setting up verifier: ' + e.message);
       console.error('Error connecting verifier to prover server: ' + e.message);
+
+      trackEvent('devconnect', 'Error', `Connection failed`);
+
       setProcessing(false);
       return;
     }
@@ -131,6 +140,9 @@ function App(): ReactElement {
 
     setProcessing(false);
     setShowConfetti(true);
+
+    trackEvent('devconnect', 'Verification successful');
+
   }, [setResult, setProcessing]);
 
   return (
@@ -280,6 +292,7 @@ function App(): ReactElement {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="ml-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors duration-200 flex items-center space-x-2"
+                    onClick={() => trackEvent('devconnect', 'Click POAP')}
                   >
                     <span>🏆</span>
                     <span>Claim POAP</span>
