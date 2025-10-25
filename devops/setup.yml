@@ -1,0 +1,61 @@
+- hosts: prover
+  become: yes
+  tasks:
+    - name: Update packages
+      apt:
+        update_cache: yes
+        upgrade: full
+    - name: Install dependencies
+      apt:
+        name:
+          - git
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+          - vim
+        state: present
+    - name: Install Docker using official convenience script
+      shell: curl -fsSL https://get.docker.com | sh
+      args:
+        creates: /usr/bin/docker # prevents re-running if already installed
+
+    - name: Add heeckhau user to docker group
+      user:
+        name: heeckhau
+        groups: docker
+        append: yes
+
+    - name: Install additional packages
+      apt:
+        name:
+          - uidmap
+          - impressive
+          - ufw
+        state: present
+        update_cache: yes
+    - name: Clone TLSNotary demo
+      become: true
+      become_user: heeckhau
+      git:
+        repo: https://github.com/tlsnotary/devconnect25_demo.git
+        dest: /home/heeckhau/devconnect25_demo
+        version: dev
+        force: yes
+    - name: Enable Docker service
+      systemd:
+        name: docker
+        enabled: yes
+        state: started
+    - name: Build Docker images for TLSNotary demo
+      become: true
+      become_user: heeckhau
+      shell: docker compose build
+      args:
+        chdir: /home/heeckhau/devconnect25_demo/prover-demo
+    - name: Run TLSNotary demo containers
+      become: true
+      become_user: heeckhau
+      shell: docker compose up -d
+      args:
+        chdir: /home/heeckhau/devconnect25_demo/prover-demo
