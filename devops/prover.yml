@@ -1,0 +1,132 @@
+- hosts: prover
+  become: yes
+  tasks:
+    - name: Set a hostname
+      hostname:
+        name: prover
+    - name: Generate locale
+      locale_gen:
+        name: en_US.UTF-8
+        state: present
+    - name: Set default locale
+      command: localectl set-locale LANG=en_US.UTF-8
+    - name: Configure system to use X11 with Openbox
+      command: raspi-config nonint do_wayland W1
+      become: yes
+    - name: Update packages
+      apt:
+        update_cache: yes
+        upgrade: full
+    - name: Install dependencies
+      apt:
+        name:
+          - git
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+          - vim
+        state: present
+    - name: Install Docker using official convenience script
+      shell: curl -fsSL https://get.docker.com | sh
+      args:
+        creates: /usr/bin/docker # prevents re-running if already installed
+
+    - name: Add heeckhau user to docker group
+      user:
+        name: heeckhau
+        groups: docker
+        append: yes
+
+    - name: Install additional packages
+      apt:
+        name:
+          - uidmap
+          - impressive
+          - ufw
+          - xdotool
+        state: present
+        update_cache: yes
+    - name: Clone TLSNotary demo
+      become: true
+      become_user: heeckhau
+      git:
+        repo: https://github.com/tlsnotary/devconnect25_demo.git
+        dest: /home/heeckhau/devconnect25_demo
+        version: dev
+        force: yes
+    - name: Copy certs folder to demo directory
+      become: true
+      become_user: heeckhau
+      copy:
+        src: certs/
+        dest: /home/heeckhau/devconnect25_demo/devops/certs/
+        mode: preserve
+    - name: Enable Docker service
+      systemd:
+        name: docker
+        enabled: yes
+        state: started
+    - name: Build Docker images for TLSNotary demo
+      become: true
+      become_user: heeckhau
+      shell: docker compose build
+      args:
+        chdir: /home/heeckhau/devconnect25_demo/prover-demo
+    - name: Run TLSNotary demo containers
+      become: true
+      become_user: heeckhau
+      shell: docker compose up -d
+      args:
+        chdir: /home/heeckhau/devconnect25_demo/prover-demo
+    - name: Create autostart directory
+      become: true
+      become_user: heeckhau
+      file:
+        path: /home/heeckhau/.config/autostart
+        state: directory
+        mode: '0755'
+    - name: Create Impressive autostart entry
+      become: true
+      become_user: heeckhau
+      copy:
+        dest: /home/heeckhau/.config/autostart/impressive.desktop
+        content: |
+          [Desktop Entry]
+          Type=Application
+          Exec=impressive --fake-fullscreen --nologo --auto 8 --wrap /home/heeckhau/devconnect25_demo/slides/demo.pdf
+          Hidden=false
+          NoDisplay=false
+          X-GNOME-Autostart-enabled=true
+          Name=Impressive Presentation
+        mode: '0644'
+    - name: Configure lxpanel to auto-hide
+      become: true
+      become_user: heeckhau
+      lineinfile:
+        path: .config/lxpanel-pi/panels/panel
+        regexp: '^autohide='
+        line: 'autohide=1'
+        create: yes
+    - name: Upload show-docker-logs script
+      become: true
+      become_user: heeckhau
+      copy:
+        src: files/show-docker-logs.sh
+        dest: /home/heeckhau/show-docker-logs.sh
+        mode: '0755'
+    - name: Create Docker logs terminal autostart entry
+      become: true
+      become_user: heeckhau
+      copy:
+        dest: /home/heeckhau/.config/autostart/docker-logs-terminal.desktop
+        content: |
+          [Desktop Entry]
+          Type=Application
+          Name=Docker Logs Terminal
+          Exec=/home/heeckhau/show-docker-logs.sh
+          Hidden=false
+          NoDisplay=false
+          X-GNOME-Autostart-enabled=true
+          X-GNOME-Autostart-Delay=5
+        mode: '0644'

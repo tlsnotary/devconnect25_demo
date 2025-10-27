@@ -1,3 +1,9 @@
-ansible-playbook -i inventory.yml setup.yml
+Prover:
+```sh
+ansible-playbook -i inventory.yml prover.yml
+```
 
-Don't forget to copy the certs manually
+Swissbank (not tested):
+```sh
+ansible-playbook -i inventory.yml swissbank.yml
+```
