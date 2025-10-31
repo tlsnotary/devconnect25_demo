@@ -185,17 +185,17 @@ function App(): ReactElement {
         <div className="flex flex-col bg-white rounded-lg shadow-md border border-gray-200 p-4">
           <div className="text-center mb-6">
             <h2 className="text-2xl font-bold text-gray-800 mb-3">
-              Verify the Ethereum Foundation's bank balance
+              Verify the Ethereum Foundation's bank balance with TLSNotary
             </h2>
             <p className="text-lg text-gray-600 mb-4">
-              With TLSNotary, you can verify the EF's bank balance without having access yourself.
+              With this demo prover, you can verify the EF's bank balance without having access to this (fake) swiss bank yourself.
             </p>
             <div className="bg-blue-50 border-l-4 border-blue-500 p-4 text-left rounded">
               <p className="text-gray-700 mb-2">
                 <strong className="text-gray-800">How it works:</strong>
               </p>
               <p className="text-gray-700 mb-2">
-                Your browser connects to our prover who proves <a href="https://swissbank.tlsnotary.org/balances">the bank balance</a> via TLSNotary's <strong>MPC-TLS protocol</strong>, giving you cryptographic guarantees of authenticity.
+                Your browser connects to our prover who proves <a href="https://swissbank.tlsnotary.org/balances" className="text-blue-600 underline hover:text-blue-800 font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 rounded-sm">the bank balance</a> via TLSNotary's <strong>MPC-TLS protocol</strong>, giving you cryptographic guarantees of authenticity.
               </p>
               <p className="text-gray-700">
                 You get a proof that the EF's Swiss Bank balance is genuine. The prover only reveals what it wants to reveal through <strong>selective disclosure</strong>.
@@ -231,7 +231,7 @@ function App(): ReactElement {
                 `}
               >
                 <span className="relative z-10 flex items-center justify-center space-x-2">
-                  <span>{ready ? 'Verify Prover Server' : 'Initializing...'}</span>
+                  <span>{ready ? 'Verify Bank Balance' : 'Initializing...'}</span>
                 </span>
                 {ready && (
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-blue-500 opacity-0 hover:opacity-20 transition-opacity duration-200"></div>
