@@ -4,13 +4,14 @@ use std::{
 };
 
 use axum::{
-    extract::ConnectInfo,
+    extract::{ConnectInfo, Form},
     http::Request,
     middleware::{self, Next},
-    response::Html,
-    routing::get,
+    response::{Html, IntoResponse, Redirect},
+    routing::{get, post},
     Json, Router,
 };
+use axum_extra::extract::cookie::{Cookie, CookieJar};
 use dioxus::prelude::*;
 use lazy_static::lazy_static;
 use tower_http::trace::TraceLayer;
@@ -29,6 +30,11 @@ use tracing::info;
 
 pub const DEFAULT_FIXTURE_PORT: u16 = 3000;
 const AUTH_TOKEN: &str = "random_auth_token";
+const SESSION_COOKIE: &str = "bank_session";
+const HARDCODED_USERS: [(&str, &str); 2] = [
+    ("tkstanczak", "TLSNotary is my favorite project"),
+    ("admin", "admin"),
+];
 const DASHBOARD_CSS: &str = include_str!("dashboard.css");
 const HTMX_JS: &str = include_str!("htmx.min.js");
 
@@ -71,6 +77,9 @@ fn add_to_global_log(message: String) {
 fn app() -> Router {
     Router::new()
         .route("/", get(home_handler))
+        .route("/login", get(login_page_handler))
+        .route("/login", post(login_handler))
+        .route("/account", get(account_page_handler))
         .route("/dashboard", get(dashboard_handler))
         .route("/balances", get(balances_route))
         .route("/logs", get(logs_endpoint))
@@ -186,6 +195,12 @@ async fn access_log_middleware(
 
 struct AuthenticatedUser;
 
+#[derive(Debug, Deserialize)]
+struct LoginForm {
+    username: String,
+    password: String,
+}
+
 impl<S> FromRequest<S> for AuthenticatedUser
 where
     S: Send + Sync,
@@ -196,6 +211,15 @@ where
         req: axum::extract::Request,
         _state: &S,
     ) -> Result<Self, Self::Rejection> {
+        // First check for session cookie
+        let cookies = CookieJar::from_headers(req.headers());
+        if let Some(session_cookie) = cookies.get(SESSION_COOKIE) {
+            if session_cookie.value() == AUTH_TOKEN {
+                return Ok(AuthenticatedUser);
+            }
+        }
+
+        // Fallback to Bearer token for API access
         let auth_header = req
             .headers()
             .get(header::AUTHORIZATION)
@@ -220,6 +244,13 @@ async fn balances_route(
     get_bank_data()
 }
 
+async fn account_page_handler(_: AuthenticatedUser) -> Result<Html<String>, StatusCode> {
+    let mut vdom = VirtualDom::new(BalancesPage);
+    vdom.rebuild_in_place();
+    let html = dioxus_ssr::render(&vdom);
+    Ok(Html(html))
+}
+
 fn get_bank_data() -> Result<Json<Value>, StatusCode> {
     Ok(Json(
         serde_json::from_str(include_str!("data/swissbankdata.json")).map_err(|e| {
@@ -232,6 +263,57 @@ fn get_bank_data() -> Result<Json<Value>, StatusCode> {
 async fn logs_endpoint() -> Json<Vec<LogEntry>> {
     let logs = GLOBAL_LOGS.read().unwrap();
     Json(logs.clone())
+}
+
+async fn login_page_handler(jar: CookieJar) -> impl IntoResponse {
+    // Check if already logged in
+    if let Some(cookie) = jar.get(SESSION_COOKIE) {
+        if cookie.value() == AUTH_TOKEN {
+            return Redirect::to("/account").into_response();
+        }
+    }
+
+    let mut vdom = VirtualDom::new_with_props(LoginPage, LoginPageProps { error: None });
+    vdom.rebuild_in_place();
+    let html = dioxus_ssr::render(&vdom);
+    Html(html).into_response()
+}
+
+async fn login_handler(jar: CookieJar, Form(form): Form<LoginForm>) -> impl IntoResponse {
+    if HARDCODED_USERS.contains(&(form.username.as_str(), form.password.as_str())) {
+        // Set session cookie
+        let cookie = Cookie::build((SESSION_COOKIE, AUTH_TOKEN))
+            .path("/")
+            .http_only(true)
+            .build();
+
+        let jar = jar.add(cookie);
+
+        info!("Successful login for user: {}", form.username);
+        add_to_global_log(format!(
+            "✅ User '{}' logged in successfully",
+            form.username
+        ));
+
+        (jar, Redirect::to("/account")).into_response()
+    } else {
+        info!("Failed login attempt for user: {}", form.username);
+        add_to_global_log(format!(
+            "❌ Failed login attempt for user '{}'",
+            form.username
+        ));
+
+        // Return to login with error
+        let mut vdom = VirtualDom::new_with_props(
+            LoginPage,
+            LoginPageProps {
+                error: Some("Invalid username or password"),
+            },
+        );
+        vdom.rebuild_in_place();
+        let html = dioxus_ssr::render(&vdom);
+        (jar, Html(html)).into_response()
+    }
 }
 
 async fn home_handler() -> Html<String> {
@@ -286,13 +368,21 @@ pub fn HomePage() -> Element {
                     p { "Use the dashboard to monitor access attempts in real-time and see how authenticated requests reveal the bank data." }
                 }
                 div { class: "links",
+                    a { class: "link-item", href: "/login",
+                        div { class: "link-title", "Login" }
+                        div { class: "link-desc", "Login to access your bank account" }
+                    }
+                    a { class: "link-item", href: "/account",
+                        div { class: "link-title", "Account" }
+                        div { class: "link-desc", "View your account balances (requires login)" }
+                    }
                     a { class: "link-item", href: "/dashboard",
                         div { class: "link-title", "Dashboard" }
                         div { class: "link-desc", "View the live access log and bank reserves" }
                     }
                     a { class: "link-item", href: "/balances",
-                        div { class: "link-title", "Balances" }
-                        div { class: "link-desc", "Access bank balances (requires authentication)" }
+                        div { class: "link-title", "Balances API" }
+                        div { class: "link-desc", "Access bank balances JSON (requires authentication)" }
                     }
                     a { class: "link-item", href: "/logs",
                         div { class: "link-title", "Logs" }
@@ -304,8 +394,7 @@ pub fn HomePage() -> Element {
     }
 }
 
-#[component]
-pub fn App(props: AppProps) -> Element {
+pub fn App(_props: AppProps) -> Element {
     let data = get_bank_data().unwrap();
     let data_str = serde_json::to_string_pretty(&*data).unwrap();
     let redacted = redact_json(&data_str);
@@ -387,6 +476,275 @@ pub fn App(props: AppProps) -> Element {
                     }});
                 }})();
             " }
+        }
+    }
+}
+
+#[derive(Props, Clone, PartialEq)]
+pub struct LoginPageProps {
+    #[props(default = None)]
+    error: Option<&'static str>,
+}
+
+#[component]
+pub fn LoginPage(props: LoginPageProps) -> Element {
+    let login_css = r##"
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .login-box {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 400px;
+        }
+        .login-box h1 {
+            color: #333;
+            margin-bottom: 0.5rem;
+            font-size: 2rem;
+        }
+        .login-box p {
+            color: #666;
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #555;
+            font-weight: 500;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .login-button {
+            width: 100%;
+            padding: 0.875rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .login-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        .login-button:active {
+            transform: translateY(0);
+        }
+        .error-message {
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #c33;
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+        }
+    "##;
+
+    rsx! {
+        head {
+            meta { charset: "utf-8" }
+            meta { name: "viewport", content: "width=device-width, initial-scale=1" }
+            title { "Swiss Bank - Login" }
+            style { dangerous_inner_html: DASHBOARD_CSS }
+            style { dangerous_inner_html: login_css }
+        }
+        body {
+            div { class: "login-container",
+                div { class: "login-box",
+                    h1 { "Swiss Bank" }
+                    p { "Please login to access your account" }
+
+                    if let Some(error) = props.error {
+                        div { class: "error-message",
+                            "{error}"
+                        }
+                    }
+
+                    form { method: "post", action: "/login",
+                        div { class: "form-group",
+                            label { r#for: "username", "Username" }
+                            input {
+                                r#type: "text",
+                                id: "username",
+                                name: "username",
+                                required: true,
+                                autofocus: true
+                            }
+                        }
+                        div { class: "form-group",
+                            label { r#for: "password", "Password" }
+                            input {
+                                r#type: "password",
+                                id: "password",
+                                name: "password",
+                                required: true
+                            }
+                        }
+                        button { class: "login-button", r#type: "submit",
+                            "Login"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[component]
+pub fn BalancesPage() -> Element {
+    // Parse the bank data
+    let bank_data: Value = serde_json::from_str(include_str!("data/swissbankdata.json")).unwrap();
+    let organization = bank_data["organization"].as_str().unwrap_or("Unknown");
+    let accounts = &bank_data["accounts"];
+
+    // Helper function to format numbers with commas
+    fn format_amount(amount_str: &str) -> String {
+        // Remove underscores from the JSON
+        let clean = amount_str.replace("_", "");
+
+        // Parse as number and format with commas
+        if let Ok(num) = clean.parse::<u64>() {
+            // Format with thousand separators using chunks
+            let s = num.to_string();
+            let chars: Vec<char> = s.chars().collect();
+
+            chars
+                .rchunks(3)
+                .rev()
+                .map(|chunk| chunk.iter().collect::<String>())
+                .collect::<Vec<_>>()
+                .join(",")
+        } else {
+            clean
+        }
+    }
+
+    let balances_css = r##"
+        .balances-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem;
+        }
+        .balances-box {
+            background: white;
+            padding: 3rem;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 600px;
+        }
+        .balances-box h1 {
+            color: #333;
+            margin-bottom: 0.5rem;
+            font-size: 2rem;
+        }
+        .org-name {
+            color: #667eea;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .balance-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 8px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .balance-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .currency {
+            font-weight: 600;
+            font-size: 1.2rem;
+            color: #555;
+        }
+        .amount {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+        .logout-link {
+            display: inline-block;
+            margin-top: 2rem;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        .logout-link:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+    "##;
+
+    rsx! {
+        head {
+            meta { charset: "utf-8" }
+            meta { name: "viewport", content: "width=device-width, initial-scale=1" }
+            title { "Account Balances - Swiss Bank" }
+            style { dangerous_inner_html: DASHBOARD_CSS }
+            style { dangerous_inner_html: balances_css }
+        }
+        body {
+            div { class: "balances-container",
+                div { class: "balances-box",
+                    h1 { "Account Balances" }
+                    div { class: "org-name",
+                        "{organization}"
+                    }
+
+                    if let Some(accounts_obj) = accounts.as_object() {
+                        for (currency, amount) in accounts_obj {
+                            div { class: "balance-item",
+                                div { class: "currency", "{currency}" }
+                                div { class: "amount",
+                                    {format_amount(amount.as_str().unwrap_or("N/A"))}
+                                }
+                            }
+                        }
+                    }
+
+                    a { class: "logout-link", href: "/",
+                        "← Back to Home"
+                    }
+                }
+            }
         }
     }
 }
