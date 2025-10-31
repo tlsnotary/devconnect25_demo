@@ -85,7 +85,7 @@
       file:
         path: /home/heeckhau/.config/autostart
         state: directory
-        mode: '0755'
+        mode: "0755"
     - name: Create Impressive autostart entry
       become: true
       become_user: heeckhau
@@ -94,19 +94,19 @@
         content: |
           [Desktop Entry]
           Type=Application
-          Exec=impressive --fake-fullscreen --nologo --auto 8 --wrap /home/heeckhau/devconnect25_demo/slides/demo.pdf
+          Exec=impressive --fake-fullscreen --nologo --auto 5 --page-progress --nocursor --wrap /home/heeckhau/devconnect25_demo/slides/demo.pdf
           Hidden=false
           NoDisplay=false
           X-GNOME-Autostart-enabled=true
           Name=Impressive Presentation
-        mode: '0644'
+        mode: "0644"
     - name: Configure lxpanel to auto-hide
       become: true
       become_user: heeckhau
       lineinfile:
         path: .config/lxpanel-pi/panels/panel
-        regexp: '^autohide='
-        line: 'autohide=1'
+        regexp: "^autohide="
+        line: "autohide=1"
         create: yes
     - name: Upload show-docker-logs script
       become: true
@@ -114,7 +114,7 @@
       copy:
         src: files/show-docker-logs.sh
         dest: /home/heeckhau/show-docker-logs.sh
-        mode: '0755'
+        mode: "0755"
     - name: Create Docker logs terminal autostart entry
       become: true
       become_user: heeckhau
@@ -129,4 +129,4 @@
           NoDisplay=false
           X-GNOME-Autostart-enabled=true
           X-GNOME-Autostart-Delay=5
-        mode: '0644'
+        mode: "0644"

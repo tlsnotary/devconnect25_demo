@@ -1,10 +1,12 @@
 #!/bin/bash
 
+sleep 5
+
 # Launch terminal
 lxterminal --title="logs" --working-directory=/home/heeckhau/devconnect25_demo/prover-demo -e "docker compose logs -f" &
 
 # Wait for terminal to appear
-sleep 1
+sleep 2
 
 # Find and manipulate the terminal window
 TERM_WINDOW=$(xdotool search --name "logs" | head -1)
