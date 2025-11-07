@@ -244,11 +244,25 @@ async fn balances_route(
     get_bank_data()
 }
 
-async fn account_page_handler(_: AuthenticatedUser) -> Result<Html<String>, StatusCode> {
-    let mut vdom = VirtualDom::new(BalancesPage);
-    vdom.rebuild_in_place();
-    let html = dioxus_ssr::render(&vdom);
-    Ok(Html(html))
+async fn account_page_handler(jar: CookieJar) -> impl IntoResponse {
+    // Check if the user is authenticated
+    let is_authenticated = jar.get(SESSION_COOKIE)
+        .map(|cookie| cookie.value() == AUTH_TOKEN)
+        .unwrap_or(false);
+
+    if is_authenticated {
+        // User is authenticated, show the balances page
+        let mut vdom = VirtualDom::new(BalancesPage);
+        vdom.rebuild_in_place();
+        let html = dioxus_ssr::render(&vdom);
+        Html(html).into_response()
+    } else {
+        // User is not authenticated, show login required page
+        let mut vdom = VirtualDom::new(LoginRequiredPage);
+        vdom.rebuild_in_place();
+        let html = dioxus_ssr::render(&vdom);
+        Html(html).into_response()
+    }
 }
 
 fn get_bank_data() -> Result<Json<Value>, StatusCode> {
@@ -617,34 +631,96 @@ pub fn LoginPage(props: LoginPageProps) -> Element {
 }
 
 #[component]
-pub fn BalancesPage() -> Element {
-    // Parse the bank data
-    let bank_data: Value = serde_json::from_str(include_str!("data/swissbankdata.json")).unwrap();
-    let organization = bank_data["organization"].as_str().unwrap_or("Unknown");
-    let accounts = &bank_data["accounts"];
+pub fn LoginRequiredPage() -> Element {
+    let login_required_css = r##"
+        .login-required-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem;
+        }
+        .login-required-box {
+            background: white;
+            padding: 3rem;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        .login-required-box h1 {
+            color: #333;
+            margin-bottom: 1rem;
+            font-size: 2rem;
+        }
+        .login-required-box p {
+            color: #666;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+            line-height: 1.5;
+        }
+        .login-button-large {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 1.5rem;
+        }
+        .login-button-large:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        .back-link {
+            display: inline-block;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            margin-top: 1rem;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    "##;
 
-    // Helper function to format numbers with commas
-    fn format_amount(amount_str: &str) -> String {
-        // Remove underscores from the JSON
-        let clean = amount_str.replace("_", "");
-
-        // Parse as number and format with commas
-        if let Ok(num) = clean.parse::<u64>() {
-            // Format with thousand separators using chunks
-            let s = num.to_string();
-            let chars: Vec<char> = s.chars().collect();
-
-            chars
-                .rchunks(3)
-                .rev()
-                .map(|chunk| chunk.iter().collect::<String>())
-                .collect::<Vec<_>>()
-                .join(",")
-        } else {
-            clean
+    rsx! {
+        head {
+            meta { charset: "utf-8" }
+            meta { name: "viewport", content: "width=device-width, initial-scale=1" }
+            title { "Login Required - Swiss Bank" }
+            style { dangerous_inner_html: DASHBOARD_CSS }
+            style { dangerous_inner_html: login_required_css }
+        }
+        body {
+            div { class: "login-required-container",
+                div { class: "login-required-box",
+                    h1 { "🔒 Authentication Required" }
+                    p { "You need to log in to access your account balances and banking information." }
+                    p { "Please log in with your credentials to continue." }
+                    
+                    a { class: "login-button-large", href: "/login",
+                        "Go to Login Page"
+                    }
+                    
+                    br {}
+                    
+                    a { class: "back-link", href: "/",
+                        "← Back to Home"
+                    }
+                }
+            }
         }
     }
+}
 
+#[component]
+pub fn BalancesPage() -> Element {
     let balances_css = r##"
         .balances-container {
             min-height: 100vh;
@@ -725,26 +801,25 @@ pub fn BalancesPage() -> Element {
             div { class: "balances-container",
                 div { class: "balances-box",
                     h1 { "Account Balances" }
-                    div { class: "org-name",
-                        "{organization}"
+                    div { class: "org-name", id: "org-name",
+                        "Loading..."
                     }
 
-                    if let Some(accounts_obj) = accounts.as_object() {
-                        for (currency, amount) in accounts_obj {
-                            div { class: "balance-item",
-                                div { class: "currency", "{currency}" }
-                                div { class: "amount",
-                                    {format_amount(amount.as_str().unwrap_or("N/A"))}
-                                }
-                            }
-                        }
+                    div { id: "loading-message", style: "text-align: center; padding: 2rem; color: #667eea; font-size: 1.1rem;",
+                        "Loading account balances..."
                     }
+
+                    div { id: "accounts-container", style: "display: none;" }
+
+                    div { id: "error-message", style: "display: none; color: #c33; background: #fee; border: 1px solid #fcc; padding: 1rem; border-radius: 6px; margin: 1rem 0; text-align: center;" }
 
                     a { class: "logout-link", href: "/",
                         "← Back to Home"
                     }
                 }
             }
+
+            script { dangerous_inner_html: include_str!("balances.js") }
         }
     }
 }
