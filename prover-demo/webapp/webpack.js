@@ -1,7 +1,8 @@
 var webpack = require('webpack'),
   path = require('path'),
   CopyWebpackPlugin = require('copy-webpack-plugin'),
-  HtmlWebpackPlugin = require('html-webpack-plugin');
+  HtmlWebpackPlugin = require('html-webpack-plugin'),
+  CompressionPlugin = require('compression-webpack-plugin');
 
 const ASSET_PATH = process.env.ASSET_PATH || '/';
 
@@ -151,6 +152,22 @@ var options = {
     new webpack.DefinePlugin({
       'process.env.PROVER_PROXY_URL': JSON.stringify(process.env.PROVER_PROXY_URL || 'ws://localhost:9816/prove'),
       'process.env.POAP_LINK': JSON.stringify(process.env.POAP_LINK || ''),
+    }),
+    // Precompress wasm and js files with gzip
+    new CompressionPlugin({
+      test: /\.(wasm|js)$/,
+      filename: '[path][base].gz',
+      algorithm: 'gzip',
+      threshold: 1024, // Only compress files > 1KB
+      minRatio: 0.8,
+    }),
+    // Precompress wasm and js files with brotli
+    new CompressionPlugin({
+      test: /\.(wasm|js)$/,
+      filename: '[path][base].br',
+      algorithm: 'brotliCompress',
+      threshold: 1024, // Only compress files > 1KB
+      minRatio: 0.8,
     }),
   ].filter(Boolean),
   // Required by wasm-bindgen-rayon, in order to use SharedArrayBuffer on the Web

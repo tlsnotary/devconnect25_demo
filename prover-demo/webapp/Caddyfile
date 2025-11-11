@@ -1,6 +1,10 @@
 :80 {
 	root * /usr/share/caddy
-	file_server
+
+	# Enable precompressed file serving
+	file_server {
+		precompressed br gzip
+	}
 
 	# SPA routing - try files, fallback to index.html
 	try_files {path} {path}/ /index.html
