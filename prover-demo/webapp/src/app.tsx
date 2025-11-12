@@ -24,6 +24,8 @@ const originalLog = console.log;
 
 const proverProxyUrl = process.env.PROVER_PROXY_URL || 'ws://localhost:9816/prove';
 const poapLink = process.env.POAP_LINK || '';
+const gitCommitSha = process.env.GIT_COMMIT_SHA || '';
+const githubRepository = process.env.GITHUB_REPOSITORY || '';
 
 function App(): ReactElement {
   const [ready, setReady] = useState(false);
@@ -308,6 +310,24 @@ function App(): ReactElement {
 
         </div>
       </div>
+
+      {/* Footer */}
+      {gitCommitSha && (
+        <footer className="w-full p-3 bg-slate-800 text-gray-400 text-center text-xs flex-shrink-0">
+          {githubRepository ? (
+            <a
+              href={`https://github.com/${githubRepository}/commit/${gitCommitSha}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-400 hover:text-white transition-colors duration-200"
+            >
+              Build: {gitCommitSha.slice(0, 7)}
+            </a>
+          ) : (
+            <span>Build: {gitCommitSha.slice(0, 7)}</span>
+          )}
+        </footer>
+      )}
     </div>
   );
 }

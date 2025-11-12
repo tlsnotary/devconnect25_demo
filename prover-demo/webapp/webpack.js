@@ -159,6 +159,8 @@ var options = {
     new webpack.DefinePlugin({
       'process.env.PROVER_PROXY_URL': JSON.stringify(process.env.PROVER_PROXY_URL || 'ws://localhost:9816/prove'),
       'process.env.POAP_LINK': JSON.stringify(process.env.POAP_LINK || ''),
+      'process.env.GIT_COMMIT_SHA': JSON.stringify(process.env.GITHUB_SHA || ''),
+      'process.env.GITHUB_REPOSITORY': JSON.stringify(process.env.GITHUB_REPOSITORY || ''),
     }),
     // Precompress wasm and js files with gzip
     new CompressionPlugin({
