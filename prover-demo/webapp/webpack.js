@@ -40,6 +40,13 @@ var options = {
   module: {
     rules: [
       {
+        test: /\.wasm$/,
+        type: 'asset/resource',
+        generator: {
+          filename: '[name][ext]',
+        },
+      },
+      {
         test: /\.svg$/,
         use: [
           {
