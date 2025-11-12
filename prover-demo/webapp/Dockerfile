@@ -21,6 +21,12 @@ ENV PROVER_PROXY_URL=${PROVER_PROXY_URL}
 ARG POAP_LINK=""
 ENV POAP_LINK=${POAP_LINK}
 
+# GitHub repository and commit SHA for showing version in the app
+ARG GITHUB_REPOSITORY
+ENV GITHUB_REPOSITORY=${GITHUB_REPOSITORY}
+ARG GIT_COMMIT_SHA
+ENV GIT_COMMIT_SHA=${GIT_COMMIT_SHA}
+
 # Build the application
 RUN npx webpack --config webpack.js --mode production
 
@@ -35,3 +41,4 @@ COPY --from=builder /app/build /usr/share/caddy
 
 # Expose port 80
 EXPOSE 80
+
