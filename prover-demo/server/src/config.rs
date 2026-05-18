@@ -5,7 +5,7 @@ use http::Uri;
 pub const MAX_SENT_DATA: usize = 148;
 
 /// Maximum number of bytes that can be received by prover from server
-pub const MAX_RECV_DATA: usize = 460;
+pub const MAX_RECV_DATA: usize = 520;
 
 /// Default server configuration
 pub struct Config {
